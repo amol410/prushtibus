@@ -126,17 +126,10 @@ class _Login_ScreenState extends State<Login_Screen> {
       }
 
       return userCredential;
-    } catch (e, stackTrace) {
+    } catch (e) {
       print("Error during Google Sign-In: $e");
-      print("Stack trace: $stackTrace");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.red,
-            content: Text("Google Sign-In failed: ${e.toString()}"),
-          ),
-        );
-      }
+      // Don't show error to user - the fallback handler will check if auth succeeded
+      // This error is often a false positive due to internal google_sign_in issues
       return null;
     }
   }
@@ -221,7 +214,7 @@ class _Login_ScreenState extends State<Login_Screen> {
       }
 
       // Wait a bit for Firebase to process
-      await Future.delayed(const Duration(milliseconds: 1000));
+      await Future.delayed(const Duration(milliseconds: 1500));
 
       // Check if user is actually signed in despite the error
       final currentUser = FirebaseAuth.instance.currentUser;
@@ -251,11 +244,23 @@ class _Login_ScreenState extends State<Login_Screen> {
           context,
           MaterialPageRoute(builder: (context) => const Home_Screen()),
         );
-      } else if (mounted) {
+        // Show success message since authentication actually worked
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.green,
+            content: Text(
+              "Google Sign-In Successful!",
+              style: TextStyle(fontSize: 20.0, color: Colors.black),
+            ),
+          ),
+        );
+      } else if (mounted) {
+        // Only show error if authentication truly failed
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
             backgroundColor: Colors.red,
-            content: Text("Sign-In Error: ${e.toString()}"),
+            content: Text("Google Sign-In failed. Please try again."),
           ),
         );
       }

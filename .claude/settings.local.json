@@ -14,7 +14,8 @@
       "Bash(./gradlew signingReport:*)",
       "Bash(copy \"C:\\Users\\Admin\\Downloads\\google-services (7).json\" \"C:\\Users\\Admin\\Desktop\\Android\\campus_ride\\android\\app\\google-services.json\")",
       "Bash(flutter logs:*)",
-      "Bash(flutterfire configure:*)"
+      "Bash(flutterfire configure:*)",
+      "Bash(flutter run:*)"
     ],
     "deny": [],
     "ask": []

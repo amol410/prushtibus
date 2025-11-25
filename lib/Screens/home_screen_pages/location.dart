@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
@@ -21,6 +22,7 @@ class _MapScreenState extends State<MapScreen> {
   final List<LatLng> polylineCoordinates = [];
   late PolylinePoints _polylinePoints;
   Uint8List? markerIcon;
+  StreamSubscription<LocationData>? _locationSubscription;
 
   @override
   void initState() {
@@ -31,6 +33,7 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   void dispose() {
+    _locationSubscription?.cancel();
     _mapController.dispose();
     super.dispose();
   }
@@ -60,11 +63,16 @@ class _MapScreenState extends State<MapScreen> {
     if (!mounted) return;
     setState(() {});
 
-    _location.onLocationChanged.listen((LocationData currentLocation) {
-      if (!mounted) return;
-      setState(() {
-        _currentLocation = currentLocation;
-      });
+    // Cancel any existing subscription before creating a new one
+    await _locationSubscription?.cancel();
+
+    // Store the subscription so we can cancel it in dispose
+    _locationSubscription = _location.onLocationChanged.listen((LocationData currentLocation) {
+      if (mounted) {
+        setState(() {
+          _currentLocation = currentLocation;
+        });
+      }
     });
   }
 

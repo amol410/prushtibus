@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -26,6 +27,7 @@ class _ProfileState extends State<Profile> {
   String selectedGender = "Select"; // Default gender selection
   String selectedTravelAgency = "Select"; // Default travel agency selection
   bool isLoading = true;
+  bool isUploadingImage = false;
   String? profileImageUrl;
   File? selectedImage;
 
@@ -78,46 +80,182 @@ class _ProfileState extends State<Profile> {
   }
 
   Future<void> pickImage() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      setState(() => selectedImage = File(pickedFile.path));
-      uploadImage();
+    try {
+      final pickedFile = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          selectedImage = File(pickedFile.path);
+        });
+
+        // Upload the image immediately after selection
+        await uploadImage();
+      }
+    } catch (e) {
+      print("Error picking image: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error selecting image: $e")),
+        );
+      }
     }
   }
 
   Future<void> uploadImage() async {
-    if (selectedImage == null) return;
+    if (selectedImage == null) {
+      print("❌ No image selected");
+      return;
+    }
 
     User? user = auth.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      print("❌ No user logged in");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("User not logged in!")),
+        );
+      }
+      return;
+    }
+
+    // Show loading state
+    setState(() {
+      isUploadingImage = true;
+    });
 
     try {
-      String filePath = 'profile_images/${user.uid}.jpg';
-      UploadTask uploadTask = storage.ref().child(filePath).putFile(selectedImage!);
+      print("✅ Starting image upload for user: ${user.uid}");
+      print("📁 File path: ${selectedImage!.path}");
+      print("📊 File size: ${await selectedImage!.length()} bytes");
 
-      TaskSnapshot snapshot = await uploadTask;
+      // Create a unique file path for the profile image
+      String filePath = 'profile_images/${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      Reference storageRef = storage.ref().child(filePath);
+
+      print("🚀 Uploading to Firebase Storage: $filePath");
+
+      // Upload the file to Firebase Storage with metadata
+      final metadata = SettableMetadata(
+        contentType: 'image/jpeg',
+        customMetadata: {'userId': user.uid},
+      );
+
+      UploadTask uploadTask = storageRef.putFile(selectedImage!, metadata);
+
+      // Monitor upload progress
+      uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+        double progress = snapshot.bytesTransferred / snapshot.totalBytes;
+        print("📤 Upload progress: ${(progress * 100).toStringAsFixed(2)}%");
+      });
+
+      // Add timeout to prevent hanging forever
+      TaskSnapshot snapshot = await uploadTask.timeout(
+        const Duration(seconds: 60),
+        onTimeout: () {
+          throw TimeoutException('Upload timed out after 60 seconds');
+        },
+      );
+
+      print("✅ Upload completed! State: ${snapshot.state}");
+
+      // Get the download URL
+      print("🔗 Getting download URL...");
       String downloadUrl = await snapshot.ref.getDownloadURL();
+      print("✅ Download URL: $downloadUrl");
 
-      await firestore.collection('users').doc(user.uid).update({'profileImageUrl': downloadUrl});
+      // Update Firestore with the new profile image URL
+      print("💾 Updating Firestore...");
+      await firestore.collection('users').doc(user.uid).update({
+        'profileImageUrl': downloadUrl,
+      });
+      print("✅ Firestore updated successfully!");
 
-      setState(() => profileImageUrl = downloadUrl);
+      // Update local state
+      if (mounted) {
+        setState(() {
+          profileImageUrl = downloadUrl;
+          isUploadingImage = false;
+        });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Profile picture updated!")),
-      );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Profile picture updated successfully!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } on TimeoutException catch (e) {
+      print("⏱️ Upload timeout: $e");
+      if (mounted) {
+        setState(() {
+          isUploadingImage = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Upload timed out. Please check your internet connection and try again."),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+    } on FirebaseException catch (e) {
+      print("🔥 Firebase error: ${e.code} - ${e.message}");
+      if (mounted) {
+        setState(() {
+          isUploadingImage = false;
+        });
+
+        String errorMessage = "Upload failed: ";
+        if (e.code == 'unauthorized') {
+          errorMessage += "Permission denied. Please check Firebase Storage rules.";
+        } else if (e.code == 'canceled') {
+          errorMessage += "Upload was canceled.";
+        } else {
+          errorMessage += e.message ?? e.code;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error uploading image: $e")),
-      );
+      print("❌ Error uploading image: $e");
+      print("Stack trace: ${StackTrace.current}");
+
+      if (mounted) {
+        setState(() {
+          isUploadingImage = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error uploading image: $e"),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     }
   }
 
-  void saveProfileData() async {
+  Future<void> saveProfileData() async {
     User? user = auth.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("User not logged in!")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("User not logged in!")),
+        );
+      }
       return;
     }
 
@@ -126,32 +264,80 @@ class _ProfileState extends State<Profile> {
         emailController.text.isEmpty ||
         selectedGender == "Select" ||
         selectedTravelAgency == "Select") {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please fill all required fields!")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Please fill all required fields!")),
+        );
+      }
       return;
     }
 
+    // Show loading indicator
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
     try {
+      print("💾 Saving profile data for user: ${user.uid}");
+
+      // Use set with merge to avoid overwriting existing fields like 'uid'
       await firestore.collection('users').doc(user.uid).set({
-        'name': nameController.text,
-        'phone': phoneController.text,
-        'email': emailController.text,
-        'department': departmentController.text,
-        'enrollment': enrollmentController.text,
+        'uid': user.uid,
+        'name': nameController.text.trim(),
+        'phone': phoneController.text.trim(),
+        'email': emailController.text.trim(),
+        'department': departmentController.text.trim(),
+        'enrollment': enrollmentController.text.trim(),
         'gender': selectedGender,
         'travelAgency': selectedTravelAgency,
-        'profileImageUrl': profileImageUrl,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
+        'profileImageUrl': profileImageUrl ?? '',
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Profile saved successfully!")),
-      );
+      print("✅ Profile saved successfully!");
+
+      // Close loading dialog first
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.pop(context);
+
+        // Wait a frame before showing SnackBar
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Profile saved successfully!"),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error saving profile: $e")),
-      );
+      print("❌ Error saving profile: $e");
+
+      // Close loading dialog first
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.pop(context);
+
+        // Wait a frame before showing SnackBar
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Error saving profile: $e"),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -193,16 +379,50 @@ class _ProfileState extends State<Profile> {
           child: Column(
             children: [
               GestureDetector(
-                onTap: pickImage,
-                child: CircleAvatar(
-                  radius: 60,
-                  backgroundColor: Colors.grey[300],
-                  backgroundImage: profileImageUrl != null
-                      ? NetworkImage(profileImageUrl!)
-                      : null,
-                  child: profileImageUrl == null
-                      ? const Icon(Icons.camera_alt, size: 40, color: Colors.white)
-                      : null,
+                onTap: isUploadingImage ? null : pickImage,
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 60,
+                      backgroundColor: Colors.grey[300],
+                      backgroundImage: selectedImage != null
+                          ? FileImage(selectedImage!)
+                          : (profileImageUrl != null && profileImageUrl!.isNotEmpty
+                              ? NetworkImage(profileImageUrl!) as ImageProvider
+                              : null),
+                      onBackgroundImageError: (exception, stackTrace) {
+                        print("❌ Error loading profile image: $exception");
+                        // Reset the profile image URL if it fails to load
+                        if (mounted) {
+                          setState(() {
+                            profileImageUrl = null;
+                          });
+                        }
+                      },
+                      child: profileImageUrl == null && selectedImage == null
+                          ? const Icon(Icons.camera_alt, size: 40, color: Colors.white)
+                          : null,
+                    ),
+                    if (isUploadingImage)
+                      Positioned.fill(
+                        child: CircleAvatar(
+                          radius: 60,
+                          backgroundColor: Colors.black54,
+                          child: const CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 3,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Tap to change profile picture",
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
                 ),
               ),
               const SizedBox(height: 16),
