@@ -1,0 +1,76 @@
+{
+  "project_info": {
+    "project_number": "207960171476",
+    "project_id": "hk-medical-237cc",
+    "storage_bucket": "hk-medical-237cc.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:207960171476:android:d170eb5f6064e3cf892c41",
+        "android_client_info": {
+          "package_name": "com.example.campus_ride"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "207960171476-tfiq9vq8b9tupvrfvu5ou4aij5n6t0ub.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCyBTdG_hW8MpjH3KywAc5UaG803Q7N_GI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "207960171476-tfiq9vq8b9tupvrfvu5ou4aij5n6t0ub.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:207960171476:android:c3c8310395aa4a6c892c41",
+        "android_client_info": {
+          "package_name": "com.example.hk_medical"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "207960171476-ntmii1447l6835ps68dsquh0bc0dq43m.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.hk_medical",
+            "certificate_hash": "922c4ccea8180af4ca46984599388c3005762767"
+          }
+        },
+        {
+          "client_id": "207960171476-tfiq9vq8b9tupvrfvu5ou4aij5n6t0ub.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCyBTdG_hW8MpjH3KywAc5UaG803Q7N_GI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "207960171476-tfiq9vq8b9tupvrfvu5ou4aij5n6t0ub.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
