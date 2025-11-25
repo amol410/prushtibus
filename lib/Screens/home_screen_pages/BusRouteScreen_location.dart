@@ -189,10 +189,10 @@ class BusRouteScreen extends StatelessWidget {
                   Navigator.push(
                       context, MaterialPageRoute(builder: (_) => const MapScreen()));
                 },
-                child: SizedBox(
+                child: const SizedBox(
                   height: 350,
                   width: double.infinity,
-                  child: const MapScreen(),
+                  child: MapScreen(),
                 ),
               ),
               const SizedBox(height: 8),

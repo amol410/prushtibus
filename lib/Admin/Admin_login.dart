@@ -26,7 +26,7 @@ class _Admin_LoginScreenState extends State<Admin_LoginScreen> {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: _email.text, password: _password.text);
       Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (context) => DashboardScreen()));
+          context, MaterialPageRoute(builder: (context) => const DashboardScreen()));
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           behavior: SnackBarBehavior.floating,

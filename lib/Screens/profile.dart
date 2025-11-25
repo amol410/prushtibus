@@ -38,30 +38,42 @@ class _ProfileState extends State<Profile> {
   void fetchUserData() async {
     User? user = auth.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("User not logged in!")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("User not logged in!")),
+        );
+      }
       setState(() => isLoading = false);
       return;
     }
 
-    DocumentSnapshot userDoc = await firestore.collection('users').doc(user.uid).get();
+    try {
+      DocumentSnapshot userDoc = await firestore.collection('users').doc(user.uid).get();
 
-    if (userDoc.exists) {
-      Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>;
-      setState(() {
-        nameController.text = data['name'] ?? "";
-        phoneController.text = data['phone'] ?? "";
-        emailController.text = data['email'] ?? "";
-        departmentController.text = data['department'] ?? "";
-        enrollmentController.text = data['enrollment'] ?? "";
-        selectedGender = data['gender'] ?? "Select";
-        selectedTravelAgency = data['travelAgency'] ?? "Select";
-        profileImageUrl = data['profileImageUrl'];
-        isLoading = false;
-      });
-    } else {
+      if (userDoc.exists) {
+        Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>;
+        setState(() {
+          nameController.text = data['name'] ?? "";
+          phoneController.text = data['phone'] ?? "";
+          emailController.text = data['email'] ?? "";
+          departmentController.text = data['department'] ?? "";
+          enrollmentController.text = data['enrollment'] ?? "";
+          selectedGender = data['gender'] ?? "Select";
+          selectedTravelAgency = data['travelAgency'] ?? "Select";
+          profileImageUrl = data['profileImageUrl'];
+          isLoading = false;
+        });
+      } else {
+        setState(() => isLoading = false);
+      }
+    } catch (e) {
+      print("Error fetching user data: $e");
       setState(() => isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error loading profile: $e")),
+        );
+      }
     }
   }
 
@@ -143,6 +155,19 @@ class _ProfileState extends State<Profile> {
     }
   }
 
+  Future<void> logout() async {
+    try {
+      await auth.signOut();
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error logging out: $e")),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -152,6 +177,13 @@ class _ProfileState extends State<Profile> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: logout,
+            tooltip: 'Logout',
+          ),
+        ],
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())

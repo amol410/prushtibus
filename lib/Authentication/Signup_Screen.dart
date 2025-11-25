@@ -21,20 +21,49 @@ class _Sign_up_ScreenState extends State<Sign_up_Screen> {
   final auth = FirebaseAuth.instance;
 
   void register(BuildContext context) async {
-    try {
-      await _authService.signUpWithEmailPassword(
-          _name.text, _num.hashCode, _email.text, _password.text);
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const Home_Screen()),
-      );
-    } catch (e) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(e.toString()),
+    if (_name.text.isEmpty || _num.text.isEmpty || _email.text.isEmpty || _password.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.red,
+          content: Text("Please fill all fields"),
         ),
       );
+      return;
+    }
+
+    try {
+      int phoneNumber = int.parse(_num.text);
+      await _authService.signUpWithEmailPassword(
+          _name.text, phoneNumber, _email.text, _password.text);
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const Home_Screen()),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.green,
+            content: Text("Account created successfully!"),
+          ),
+        );
+      }
+    } on FormatException {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.red,
+          content: Text("Please enter a valid phone number"),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red,
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+          ),
+        );
+      }
     }
   }
 
@@ -108,6 +137,7 @@ class _Sign_up_ScreenState extends State<Sign_up_Screen> {
                     //Enter student enroll
                     TextFormField(
                       controller: _num,
+                      keyboardType: TextInputType.phone,
                       decoration: const InputDecoration(
                         prefixIcon: Icon(Icons.numbers, color: Colors.red),
                         hintText: "Enter Phone number ",

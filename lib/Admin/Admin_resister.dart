@@ -26,7 +26,7 @@ class _Admin_resisterState extends State<Admin_resister> {
           _name.text, _num.hashCode, _email.text, _password.text);
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => DashboardScreen()),
+        MaterialPageRoute(builder: (context) => const DashboardScreen()),
       );
     } catch (e) {
       showDialog(

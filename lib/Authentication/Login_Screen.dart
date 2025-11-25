@@ -3,6 +3,7 @@ import 'package:campus_ride/Authentication/Signup_Screen.dart';
 import 'package:campus_ride/Authentication/firebase_auth.dart';
 import 'package:campus_ride/Screens/home_screen_pages/home_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -21,6 +22,7 @@ class _Login_ScreenState extends State<Login_Screen> {
   final TextEditingController _email = TextEditingController();
   final TextEditingController _password = TextEditingController();
   final FirestoreData _authService = FirestoreData();
+  bool _isGoogleSignInInProgress = false;
 
   userLogin() async {
     try {
@@ -64,22 +66,206 @@ class _Login_ScreenState extends State<Login_Screen> {
         context, MaterialPageRoute(builder: (_) => const Sign_up_Screen()));
   }
 
-  Future<UserCredential> signInWithGoogle() async {
-    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+  Future<UserCredential?> signInWithGoogle() async {
+    try {
+      // Initialize GoogleSignIn
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        scopes: ['email'],
+      );
 
-    final GoogleSignInAuthentication? googleAuth = await googleUser?.authentication;
+      // Sign out first to ensure account picker shows
+      await googleSignIn.signOut();
 
-    final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth?.accessToken,
-      idToken: googleAuth?.idToken,
-    );
+      // Trigger the authentication flow
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
-    return await FirebaseAuth.instance.signInWithCredential(credential);
+      // If user cancels the sign-in
+      if (googleUser == null) {
+        print("Google Sign-In cancelled by user");
+        return null;
+      }
+
+      print("Google User: ${googleUser.email}");
+
+      // Obtain the auth details from the request
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      print("Access Token: ${googleAuth.accessToken != null}");
+      print("ID Token: ${googleAuth.idToken != null}");
+
+      // Create a new credential
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Sign in to Firebase with the Google credential
+      UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+
+      print("Firebase User: ${userCredential.user?.email}");
+
+      // Create user document in Firestore if it doesn't exist
+      final user = userCredential.user;
+      if (user != null) {
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+
+        if (!userDoc.exists) {
+          print("Creating new user document for ${user.email}");
+          // Create new user document for Google Sign-In users
+          await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+            'uid': user.uid,
+            'name': user.displayName ?? 'User',
+            'email': user.email ?? '',
+            'profileImageUrl': user.photoURL,
+            'timestamp': FieldValue.serverTimestamp(),
+          });
+          print("User document created successfully");
+        } else {
+          print("User document already exists");
+        }
+      }
+
+      return userCredential;
+    } catch (e, stackTrace) {
+      print("Error during Google Sign-In: $e");
+      print("Stack trace: $stackTrace");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red,
+            content: Text("Google Sign-In failed: ${e.toString()}"),
+          ),
+        );
+      }
+      return null;
+    }
   }
 
-  _handleGoogleBtnClick() {
-    signInWithGoogle().then((user) => Navigator.pushReplacement(
-        context, MaterialPageRoute(builder: (context) => const Home_Screen())));
+  _handleGoogleBtnClick() async {
+    if (_isGoogleSignInInProgress) return;
+
+    setState(() {
+      _isGoogleSignInInProgress = true;
+    });
+
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // Wait a bit for Firebase auth state to update
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      final userCredential = await signInWithGoogle();
+
+      // Wait for Firebase to fully process the sign-in
+      await Future.delayed(const Duration(milliseconds: 1000));
+
+      // Close loading indicator
+      if (mounted) {
+        Navigator.pop(context);
+      }
+
+      // Check if user is actually signed in to Firebase (even if GoogleSignIn threw an error)
+      final currentUser = FirebaseAuth.instance.currentUser;
+
+      if (currentUser != null && mounted) {
+        // Ensure user document exists
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).get();
+
+        if (!userDoc.exists) {
+          print("Creating user document for ${currentUser.email}");
+          await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).set({
+            'uid': currentUser.uid,
+            'name': currentUser.displayName ?? 'User',
+            'email': currentUser.email ?? '',
+            'profileImageUrl': currentUser.photoURL,
+            'timestamp': FieldValue.serverTimestamp(),
+          });
+        }
+
+        // User is signed in, navigate to home
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const Home_Screen()),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.green,
+            content: Text(
+              "Google Sign-In Successful!",
+              style: TextStyle(fontSize: 20.0, color: Colors.black),
+            ),
+          ),
+        );
+      } else if (userCredential == null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.orange,
+            content: Text("Sign-In was cancelled"),
+          ),
+        );
+      }
+    } catch (e) {
+      print("Error in Google Sign-In handler: $e");
+
+      // Close loading indicator if still showing
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+
+      // Wait a bit for Firebase to process
+      await Future.delayed(const Duration(milliseconds: 1000));
+
+      // Check if user is actually signed in despite the error
+      final currentUser = FirebaseAuth.instance.currentUser;
+
+      if (currentUser != null && mounted) {
+        // Ensure user document exists
+        try {
+          final userDoc = await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).get();
+
+          if (!userDoc.exists) {
+            print("Creating user document for ${currentUser.email}");
+            await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).set({
+              'uid': currentUser.uid,
+              'name': currentUser.displayName ?? 'User',
+              'email': currentUser.email ?? '',
+              'profileImageUrl': currentUser.photoURL,
+              'timestamp': FieldValue.serverTimestamp(),
+            });
+          }
+        } catch (firestoreError) {
+          print("Error creating user document: $firestoreError");
+        }
+
+        // User is signed in, navigate to home despite the error
+        print("User is signed in despite error, proceeding to home screen");
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const Home_Screen()),
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red,
+            content: Text("Sign-In Error: ${e.toString()}"),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGoogleSignInInProgress = false;
+        });
+      }
+    }
   }
 
   @override

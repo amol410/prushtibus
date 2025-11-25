@@ -21,7 +21,7 @@ class _Driver_SplashScreanState extends State<Driver_SplashScrean> {
       SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(statusBarColor: Colors.transparent));
 
       if (FirebaseAuth.instance.currentUser != null) {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => Driver_Location()));
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const Driver_Location()));
       } else {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const Driver_LoginScreen()));
       }

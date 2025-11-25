@@ -51,11 +51,11 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCyBTdG_hW8MpjH3KywAc5UaG803Q7N_GI',
-    appId: '1:207960171476:android:d170eb5f6064e3cf892c41',
-    messagingSenderId: '207960171476',
-    projectId: 'hk-medical-237cc',
-    storageBucket: 'hk-medical-237cc.appspot.com',
+    apiKey: 'AIzaSyAwiNCizVgebzO841DgS6W_nl3S7PlBv6M',
+    appId: '1:620251339020:android:568f9b38a9854b45c79129',
+    messagingSenderId: '620251339020',
+    projectId: 'campusride-d5fba',
+    storageBucket: 'campusride-d5fba.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(

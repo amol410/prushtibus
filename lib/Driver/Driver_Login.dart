@@ -26,7 +26,7 @@ class _Driver_LoginScreenState extends State<Driver_LoginScreen> {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: _email.text, password: _password.text);
       Navigator.pushReplacement(context,
-          MaterialPageRoute(builder: (context) => Driver_Location()));
+          MaterialPageRoute(builder: (context) => const Driver_Location()));
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           behavior: SnackBarBehavior.floating,

@@ -9,7 +9,12 @@
       "Bash(flutter pub get:*)",
       "Bash(flutter build:*)",
       "Bash(flutter clean:*)",
-      "Bash(flutter devices:*)"
+      "Bash(flutter devices:*)",
+      "Bash(gradlew signingReport:*)",
+      "Bash(./gradlew signingReport:*)",
+      "Bash(copy \"C:\\Users\\Admin\\Downloads\\google-services (7).json\" \"C:\\Users\\Admin\\Desktop\\Android\\campus_ride\\android\\app\\google-services.json\")",
+      "Bash(flutter logs:*)",
+      "Bash(flutterfire configure:*)"
     ],
     "deny": [],
     "ask": []

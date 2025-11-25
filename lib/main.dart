@@ -1,8 +1,6 @@
-import 'package:campus_ride/Screens/home_screen_pages/Bus_pass.dart';
 import 'package:campus_ride/Screens/splash_screen.dart';
 import 'package:campus_ride/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 

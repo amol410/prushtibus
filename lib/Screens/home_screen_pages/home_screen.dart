@@ -20,7 +20,7 @@ class _Home_ScreenState extends State<Home_Screen> {
     const BusRouteScreen(),
     const Schedule_Screen(),
     const NotificationsScreen(),
-    ProfileScreen(),
+    const ProfileScreen(),
   ];
 
   void _onItemTapped(int index) {

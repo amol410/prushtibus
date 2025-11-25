@@ -41,7 +41,7 @@ class DashboardScreen extends StatelessWidget {
               icon: Icons.person,
               onTap: () {
                 Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => StudentStatus()));
+                    MaterialPageRoute(builder: (_) => const StudentStatus()));
               },
             ),
             // Payments
@@ -52,7 +52,7 @@ class DashboardScreen extends StatelessWidget {
               icon: Icons.credit_card,
               onTap: () {
                 Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => PaymentStatus()));
+                    MaterialPageRoute(builder: (_) => const PaymentStatus()));
               },
             ),
             // Bus Expense
@@ -63,7 +63,7 @@ class DashboardScreen extends StatelessWidget {
               icon: Icons.build,
               onTap: () {
                 Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => BusExpenseScreen()));
+                    MaterialPageRoute(builder: (_) => const BusExpenseScreen()));
               },
             ),
             // Buses
@@ -74,7 +74,7 @@ class DashboardScreen extends StatelessWidget {
               icon: Icons.directions_bus,
               onTap: () {
                 Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => StudentStatus()));
+                    MaterialPageRoute(builder: (_) => const StudentStatus()));
               },
             ),
             // Routes

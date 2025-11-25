@@ -32,15 +32,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void fetchUserProfile() async {
     final user = auth.currentUser;
     if (user != null) {
-      DocumentSnapshot snapshot =
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      try {
+        DocumentSnapshot snapshot =
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
 
-      if (snapshot.exists && snapshot.data() != null) {
+        if (snapshot.exists && snapshot.data() != null) {
+          final data = snapshot.data() as Map<String, dynamic>;
+          setState(() {
+            userName = data['name'] ?? 'User';
+            profileImageUrl = data['profileImageUrl']; // Fetch stored profile image URL
+          });
+        } else {
+          // Document doesn't exist, set default values
+          setState(() {
+            userName = 'User';
+          });
+        }
+      } catch (e) {
+        print("Error fetching user profile: $e");
+        // Set default values on error
         setState(() {
-          userName = snapshot['name'];
-          profileImageUrl = snapshot['profileImageUrl']; // Fetch stored profile image URL
+          userName = 'User';
         });
       }
+    } else {
+      // No user logged in, set default
+      setState(() {
+        userName = 'Guest';
+      });
     }
   }
 
@@ -120,7 +139,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 trailing: const Icon(Icons.arrow_forward_ios),
                 onTap: () {
                   Navigator.push(
-                      context, MaterialPageRoute(builder: (context) => Profile()));
+                      context, MaterialPageRoute(builder: (context) => const Profile()));
                 },
               ),
               ListTile(
@@ -157,7 +176,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (context) => PaymentOptionsPage()));
+                          builder: (context) => const PaymentOptionsPage()));
                 },
               ),
               ListTile(

@@ -21,7 +21,7 @@ class _Admin_SplashScreanState extends State<Admin_SplashScrean> {
       SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(statusBarColor: Colors.transparent));
 
       if (FirebaseAuth.instance.currentUser != null) {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => DashboardScreen()));
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const DashboardScreen()));
       } else {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const Admin_LoginScreen()));
       }
